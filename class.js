@@ -11,8 +11,9 @@ class Person extends Utils {
     constructor({id, content, forward, position, forward_object}) {
         super();
         this.id = id;
+        this.action = 0;
         this.content = content;
-        this.foward = forward;
+        this.forward = forward;
         this.position = position;
         this.forward_object = forward_object;
     }
@@ -153,13 +154,34 @@ class Person extends Utils {
         }
     }
 
-    cut() {
-        if (this.forward_object.type === 3 && this.forward_object.content && this.forward_object.content.type === 0) {
-            let veggie = this.forward_object.content;
-            let id = setInterval(() => {
-
-            }, 16);
+    startCutting() {
+        if (this.forward_object.type === 3 && this.forward_object.content && this.forward_object.content.state === 0) {
+            let chop = this.forward_object;
+            chop.startChop();
+            this.action = 1;
         }
+    }
+
+    pauseCutting() {
+        if (this.action === 1) {
+            let chop = this.forward_object;
+            this.action = 0;
+            chop.pauseChop();
+        }
+    }
+
+    move(forward) {
+        this.turn(forward);
+        this.position.x += this.forward.x;
+        this.position.y += this.forward.y;
+    }
+
+    turn(forward) {
+        this.forward = forward;
+    }
+
+    setForwardObject(obj) {
+        this.forward_object = obj;
     }
 
 
@@ -175,21 +197,31 @@ class Pane extends Utils {
      * @param put_up
      * @param content vegggie||pan||plate
      */
-    constructor({type, enable_move, put_down, pick_up, content = []}) {
+    constructor({type, position, enable_move, put_down, pick_up, content = []}) {
         super();
         this.type = type;
+        this.position = position;
         this.enable_move = enable_move;
         this.put_down = put_down;
         this.pick_up = pick_up;
         this.content = content;
     }
+
+    setPosition(position) {
+        this.position = position;
+    }
 }
 
 //切菜台
 class Chopping extends Pane {
-    constructor() {
+    /**
+     *
+     * @param position
+     */
+    constructor({position}) {
         super({
             type: 3,
+            position,
             enable_move: false,
             put_down: true,
             pick_up: true,
@@ -198,8 +230,8 @@ class Chopping extends Pane {
         this.timer = {id: 0, totalTime: 4000, elapsedTime: 0}
     }
 
-    canOperate(){
-        if(this.content&&this.content.state !== 2){
+    canOperate() {
+        if (this.content && this.content.state !== 2) {
             return true;
         }
         else return false;
@@ -226,7 +258,7 @@ class Chopping extends Pane {
 
     stopChop() {
         clearInterval(this.timer.id);
-        this.timer= {id: 0, totalTime: 4000, elapsedTime: 0};
+        this.timer = {id: 0, totalTime: 4000, elapsedTime: 0};
         this.content.state = 2;
     }
 }
@@ -237,9 +269,10 @@ class Warehouse extends Pane {
      *
      * @param veggie  0：蘑菇 1：西红柿
      */
-    constructor(veggie) {
+    constructor({veggie, position}) {
         super({
             type: 2,
+            position,
             enable_move: false,
             put_down: true,
             pick_up: true,
@@ -265,28 +298,38 @@ class Warehouse extends Pane {
 
 //上菜口
 class Output extends Pane {
-    constructor(cupboard) {
+    /**
+     *
+     * @param cupboard
+     * @param position
+     * @param score
+     */
+    constructor({cupboard, position, score}) {
         super({
             type: 4,
+            position,
             enable_move: false,
             put_down: true,
             pick_up: false,
             content: null
         });
+        this.score = score;
         this.cupboard = cupboard;
     }
 
     pushContent(content) {
-        //todo 对菜进行评价计分
         this.cupboard.addPlate();
+        this.score.grade(content);
     }
+
 }
 
 //出盘口
 class Cupboard extends Pane {
-    constructor() {
+    constructor({position}) {
         super({
             type: 6,
+            position,
             enable_move: false,
             put_down: false,
             pick_up: true,
@@ -305,10 +348,10 @@ class Veggie extends Utils {
      * @param type 0:"蘑菇" ; 1:"西红柿" ;
      * @param state 0："生的"  1：”正在切的“ 2："切好的"
      */
-    constructor({type, state}) {
+    constructor({type}) {
         super();
         this.type = type;
-        this.state = state;
+        this.state = 0;
     }
 
 }
@@ -316,7 +359,7 @@ class Veggie extends Utils {
 class Food extends Utils {
     /**
      *
-     * @param composition  原材料
+     * @param composition  原材料[]
      * @param state  0 ：熟的  1：糊的
      */
     constructor({composition, state}) {
@@ -337,7 +380,7 @@ class Pan extends Utils {
      * @param status  0:空；1：正在煮；2：熟了；3：糊了
      * @param type
      */
-    constructor({content = [], onheard, status}) {
+    constructor({content = [], onheard = true, status = 0}) {
         super();
         this.type = 3; //锅
         this.content = content;
@@ -459,6 +502,16 @@ class Plate extends Utils {
 
 }
 
+class Ground {
+    /**
+     *
+     * @param position
+     */
+    constructor(position) {
+        this.type = 7;
+        this.position = position;
+    }
+}
 
 class Utils {
     constructor() {
@@ -468,7 +521,7 @@ class Utils {
         this.content = obj;
     }
 
-    pickCotent() {
+    pickContent() {
         let result = this.content;
         this.content = null;
         return result;
@@ -476,5 +529,194 @@ class Utils {
 
 }
 
-const map = [];
+//菜单
+class Menu {
+    /**
+     *
+     * @param type
+     * @param number
+     * @param score
+     */
+    constructor({type, number, score}) {
+        this.type = type;
+        this.number = number;
+        this.score = score;
+        this.timer = {id: 0, totalTime: 60000, elapsedTime: 0};
+        this.timer.id = setInterval(() => {
+            if (this.timer.totalTime <= this.timer.elapsedTime) {
+                this.score.reduceGrade();
+                this.timer.elapsedTime = 0;
+            }
+            this.timer.elapsedTime += 16;
+        }, 16);
+    }
 
+    stopTimer() {
+        clearInterval(this.timer.id);
+    }
+
+    isMatch(plate) {
+        if (plate.status === 0) {
+            return false;
+        }
+        if (plate.content.state === 1) {
+            return false;
+        }
+        if (plate.content.composition.length !== this.number) {
+            return false;
+        }
+        return plate.content.composition.every((veggie) => {
+            if (veggie === this.type)
+                return true;
+            else return false;
+        })
+    }
+
+
+}
+
+//评分系统
+class Score {
+    constructor(menu) {
+        this.score = 0;
+        this.menus = menu;
+    }
+
+    grade(content) {
+        for (let i = 0; i < this.menus.length; i++) {
+            if (this.menus[i].isMatch(content)) {
+                this.score += 10;
+                let menu = this.menus.splice(i, 1);
+                menu.stopTimer();
+                return;
+            }
+        }
+    }
+
+    reduceGrade() {
+        this.score -= 10;
+    }
+
+
+}
+
+
+class Game {
+    constructor(map) {
+        this.menus = [];
+        this.score = new Score(this.menus);
+        this.cupboard = new Cupboard();
+        this.output = new Output({cupboard: this.cupboard, position: {x: 0, y: 1}, score: this.score});
+        this.map = this.initMap(map);
+        this.timer = {id: 0, totalTime: 120000, elapsedTime: 0};
+    }
+
+    initMap(map) {
+        // let map = [[1, 1, 2, 1], [1, 1, 2, 1], [1, 1, 2, 1], [1, 1, 2, 1]];
+        // 0:普通； 1：灶台 ； 2：取菜台（8：蘑菇 9：西红柿） ； 3：切菜台 ； 4：上菜口 ； 5 ：垃圾桶 ； 6：出盘口 7：地砖
+
+        let result = [];
+        for (let i = 0; i < 4; i++) {
+            result.push([]);
+            for (let j = 0; j < 4; j++) {
+                switch (map[i][j]) {
+                    case 0:
+                        result[i][j] = new Pane({
+                            type: 0,
+                            position: {x: i, y: j},
+                            enable_move: false,
+                            put_down: true,
+                            pick_up: true,
+                            content: null
+                        });
+                        break;
+                    case 1:
+                        result[i][j] = new Pane({
+                            type: 1,
+                            position: {x: i, y: j},
+                            enable_move: false,
+                            put_down: true,
+                            pick_up: true,
+                            content: new Pan()
+                        });
+                        break;
+                    //取菜口2有两种菜，所以分成8和9( 8 蘑菇  9 西红柿)
+                    case 3:
+                        result[i][j] = new Chopping({position: {x: i, y: j}});
+                        break;
+                    case 4:
+                        result[i][j] = this.output;
+                        break;
+                    case 5:
+                        result[i][j] = new Pane({
+                            type: 5,
+                            position: {x: i, y: j},
+                            enable_move: false,
+                            put_down: true,
+                            pick_up: false,
+                            content: null
+                        });
+                        break;
+                    case 6:
+                        result[i][j] = this.cupboard;
+                        this.cupboard.setPosition({
+                            x: i,
+                            y: j
+                        });
+                        break;
+                    case 7:
+                        result[i][j] = new Pane({
+                            type: 7,
+                            position: {x: i, y: j},
+                            enable_move: true,
+                            put_down: false,
+                            pick_up: false,
+                            content: null
+                        });
+                        break;
+                    case 8:
+                        result[i][j] = new Warehouse({
+                            veggie: 0,
+                            position: {x: i, y: j}
+                        });
+                        break;
+                    case 9:
+                        result[i][j] = new Warehouse({
+                            veggie: 1,
+                            position: {x: i, y: j}
+                        });
+                        break;
+
+                }
+            }
+        }
+        return result;
+    }
+
+    start() {
+
+        let id = setInterval(() => {
+            if (this.timer.totalTime <= this.timer.elapsedTime) {
+                this.end();
+            }
+            if (this.timer.elapsedTime % 10000 === 0) {
+                if (this.menus.length <= 3) {
+                    let type = Math.floor(Math.random());
+                    let number = Math.floor(Math.random() * 2) + 1;
+                    this.menus.push(new Menu({type, number, score: this.score}));
+                }
+            }
+            this.timer.elapsedTime += 16;
+        }, 16);
+        this.timer.id = id;
+    }
+
+    end() {
+        clearInterval(this.timer.id);
+        this.timer = {id: 0, totalTime: 120000, elapsedTime: 0};
+    }
+
+    showEnding(){
+        alert("最终分数："+this.score);
+    }
+}
