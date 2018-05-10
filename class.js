@@ -8,7 +8,7 @@ class Person extends Utils {
      * @param position
      * @param {Pane} forward_object
      */
-    constructor({id, content, forward, position, forward_object}) {
+    constructor({id, content = null, forward = {x: -1, y: 0}, position = {x: 1, y: 1}, forward_object = null}) {
         super();
         this.id = id;
         this.action = 0;
@@ -604,6 +604,8 @@ class Score {
 class Game {
     constructor(map) {
         this.menus = [];
+        this.player1 = new Person({id: 0});
+        this.player2 = new Person({id: 1});
         this.score = new Score(this.menus);
         this.cupboard = new Cupboard();
         this.output = new Output({cupboard: this.cupboard, position: {x: 0, y: 1}, score: this.score});
@@ -614,7 +616,7 @@ class Game {
     initMap(map) {
         // let map = [[1, 1, 2, 1], [1, 1, 2, 1], [1, 1, 2, 1], [1, 1, 2, 1]];
         // 0:普通； 1：灶台 ； 2：取菜台（8：蘑菇 9：西红柿） ； 3：切菜台 ； 4：上菜口 ； 5 ：垃圾桶 ； 6：出盘口 7：地砖
-
+        //11 边界  12 player1  13 player2
         let result = [];
         for (let i = 0; i < 4; i++) {
             result.push([]);
@@ -686,6 +688,50 @@ class Game {
                             position: {x: i, y: j}
                         });
                         break;
+                    case 10:
+                        result[i][j] = new Pane({
+                            type: 0,
+                            position: {x: i, y: j},
+                            enable_move: false,
+                            put_down: true,
+                            pick_up: true,
+                            content: new Plate()
+                        });
+                        break;
+                    case 11:
+                        result[i][j] = new Pane({
+                            type: 0,
+                            position: {x: i, y: j},
+                            enable_move: false,
+                            put_down: false,
+                            pick_up: false,
+                            content: null
+                        });
+                        break;
+                    case 12:
+                        result[i][j] = new Pane({
+                            type: 7,
+                            position: {x: i, y: j},
+                            enable_move: true,
+                            put_down: false,
+                            pick_up: false,
+                            content: this.player1
+                        });
+                        this.player1.position = {x: i, y: j};
+                        this.player1.forward_object = result[i + this.player1.forward.x][j + this.player1.forward.y];
+                        break;
+                    case 13:
+                        result[i][j] = new Pane({
+                            type: 7,
+                            position: {x: i, y: j},
+                            enable_move: true,
+                            put_down: false,
+                            pick_up: false,
+                            content: this.player2
+                        });
+                        this.player2.position = {x: i, y: j};
+                        this.player2.forward_object = result[i + this.player2.forward.x][j + this.player2.forward.y];
+                        break;
 
                 }
             }
@@ -716,7 +762,7 @@ class Game {
         this.timer = {id: 0, totalTime: 120000, elapsedTime: 0};
     }
 
-    showEnding(){
-        alert("最终分数："+this.score);
+    showEnding() {
+        alert("最终分数：" + this.score);
     }
 }
