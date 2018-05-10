@@ -1,4 +1,18 @@
 //人
+class Utils {
+    constructor() {}
+
+    pushContent(obj) {
+        this.content = obj;
+    }
+
+    pickContent() {
+        let result = this.content;
+        this.content = null;
+        return result;
+    }
+
+}
 class Person extends Utils {
     /**
      *
@@ -8,13 +22,26 @@ class Person extends Utils {
      * @param position
      * @param {Pane} forward_object
      */
-    constructor({id, content, forward, position, forward_object}) {
+    constructor({
+        id,
+        content,
+        forward,
+        position,
+        forward_object
+    }) {
         super();
         this.id = id;
-        this.content = content;
-        this.foward = forward;
-        this.position = position;
-        this.forward_object = forward_object;
+        this.action = 0;
+        this.content = content || null;
+        this.forward = forward || {
+            x: -1,
+            y: 0
+        };
+        this.position = position || {
+            x: 1,
+            y: 1
+        };
+        this.forward_object = forward_object || null;
     }
 
     put() {
@@ -26,8 +53,7 @@ class Person extends Utils {
                 if (this.forward_object.content === null) {
                     this.forward_object.content = this.content;
                     this.content = null;
-                }
-                else {
+                } else {
                     //上有锅之后还能继续放菜
                     let vessel = this.forward_object.content;
                     if (vessel.type === 3 && vessel.canPut()) {
@@ -46,7 +72,7 @@ class Person extends Utils {
                     }
                 }
                 break;
-            /*灶台*/
+                /*灶台*/
             case 1:
                 //空灶台
                 if (this.forward_object.content === null) {
@@ -71,7 +97,7 @@ class Person extends Utils {
                     }
                 }
                 break;
-            //切菜口
+                //切菜口
             case 3:
                 if (this.forward_object.content === null) {
                     if ((this.content.type === 1 || this.content.type === 2) && this.content.state === 0) {
@@ -80,13 +106,13 @@ class Person extends Utils {
                     }
                 }
                 break;
-            //上菜口
+                //上菜口
             case 4:
                 if (this.content.type === 4) {
                     this.forward_object.pushContent(this.content);
                 }
                 break;
-            //垃圾桶
+                //垃圾桶
             case 5:
                 if (this.content.type === 4 || this.content.type === 3) {
                     this.content.pickContent();
@@ -108,7 +134,7 @@ class Person extends Utils {
                     this.forward_object.content = null;
                 }
                 break;
-            /*灶台*/
+                /*灶台*/
             case 1:
                 //灶台上有东西
                 if (this.forward_object.content && this.content === null) {
@@ -134,13 +160,13 @@ class Person extends Utils {
                     }
                 }
                 break;
-            //取菜台
+                //取菜台
             case 2:
                 if (this.content === null) {
                     this.content = this.forward_object.pickContent();
                 }
                 break;
-            //切菜口
+                //切菜口
             case 3:
                 if (this.forward_object.content && this.content === null) {
                     let veggie = this.forward_object.content.type;
@@ -153,13 +179,38 @@ class Person extends Utils {
         }
     }
 
-    cut() {
-        if (this.forward_object.type === 3 && this.forward_object.content && this.forward_object.content.type === 0) {
-            let veggie = this.forward_object.content;
-            let id = setInterval(() => {
-
-            }, 16);
+    startCutting() {
+        if (this.forward_object.type === 3 && this.forward_object.content && this.forward_object.content.state === 0) {
+            let chop = this.forward_object;
+            chop.startChop();
+            this.action = 1;
         }
+    }
+
+    pauseCutting() {
+        if (this.action === 1) {
+            let chop = this.forward_object;
+            this.action = 0;
+            chop.pauseChop();
+        }
+    }
+
+    move(forward) {
+        if (forward) {
+            this.position.x += forward.x;
+            this.position.y += forward.y;
+        } else {
+            this.position.x += this.forward.x;
+            this.position.y += this.forward.y;
+        }
+    }
+
+    turn(forward) {
+        this.forward = forward;
+    }
+
+    setForwardObject(obj) {
+        this.forward_object = obj;
     }
 
 
@@ -175,34 +226,56 @@ class Pane extends Utils {
      * @param put_up
      * @param content vegggie||pan||plate
      */
-    constructor({type, enable_move, put_down, pick_up, content = []}) {
+    constructor({
+        type,
+        position,
+        enable_move,
+        put_down,
+        pick_up,
+        content
+    }) {
         super();
         this.type = type;
+        this.position = position;
         this.enable_move = enable_move;
         this.put_down = put_down;
         this.pick_up = pick_up;
-        this.content = content;
+        this.content = content || [];
+    }
+
+    setPosition(position) {
+        this.position = position;
     }
 }
 
 //切菜台
 class Chopping extends Pane {
-    constructor() {
+    /**
+     *
+     * @param position
+     */
+    constructor({
+        position
+    }) {
         super({
             type: 3,
+            position,
             enable_move: false,
             put_down: true,
             pick_up: true,
             content: null
         });
-        this.timer = {id: 0, totalTime: 4000, elapsedTime: 0}
+        this.timer = {
+            id: 0,
+            totalTime: 4000,
+            elapsedTime: 0
+        }
     }
 
-    canOperate(){
-        if(this.content&&this.content.state !== 2){
+    canOperate() {
+        if (this.content && this.content.state !== 2) {
             return true;
-        }
-        else return false;
+        } else return false;
     }
 
     startChop() {
@@ -226,7 +299,11 @@ class Chopping extends Pane {
 
     stopChop() {
         clearInterval(this.timer.id);
-        this.timer= {id: 0, totalTime: 4000, elapsedTime: 0};
+        this.timer = {
+            id: 0,
+            totalTime: 4000,
+            elapsedTime: 0
+        };
         this.content.state = 2;
     }
 }
@@ -237,9 +314,13 @@ class Warehouse extends Pane {
      *
      * @param veggie  0：蘑菇 1：西红柿
      */
-    constructor(veggie) {
+    constructor({
+        veggie,
+        position
+    }) {
         super({
             type: 2,
+            position,
             enable_move: false,
             put_down: true,
             pick_up: true,
@@ -254,8 +335,7 @@ class Warehouse extends Pane {
                 type: this.veggie,
                 state: 0
             })
-        }
-        else {
+        } else {
             let result = this.content;
             this.content = null;
             return result;
@@ -265,28 +345,42 @@ class Warehouse extends Pane {
 
 //上菜口
 class Output extends Pane {
-    constructor(cupboard) {
+    /**
+     *
+     * @param cupboard
+     * @param position
+     * @param score
+     */
+    constructor({
+        cupboard,
+        position,
+        score
+    }) {
         super({
             type: 4,
+            position,
             enable_move: false,
             put_down: true,
             pick_up: false,
             content: null
         });
+        this.score = score;
         this.cupboard = cupboard;
     }
 
     pushContent(content) {
-        //todo 对菜进行评价计分
         this.cupboard.addPlate();
+        this.score.grade(content);
     }
+
 }
 
 //出盘口
 class Cupboard extends Pane {
-    constructor() {
+    constructor(position) {
         super({
             type: 6,
+            position,
             enable_move: false,
             put_down: false,
             pick_up: true,
@@ -305,10 +399,12 @@ class Veggie extends Utils {
      * @param type 0:"蘑菇" ; 1:"西红柿" ;
      * @param state 0："生的"  1：”正在切的“ 2："切好的"
      */
-    constructor({type, state}) {
+    constructor({
+        type
+    }) {
         super();
         this.type = type;
-        this.state = state;
+        this.state = 0;
     }
 
 }
@@ -316,10 +412,13 @@ class Veggie extends Utils {
 class Food extends Utils {
     /**
      *
-     * @param composition  原材料
+     * @param composition  原材料[]
      * @param state  0 ：熟的  1：糊的
      */
-    constructor({composition, state}) {
+    constructor({
+        composition,
+        state
+    }) {
         super();
         this.composition = composition;
         this.state = state;
@@ -333,18 +432,30 @@ class Pan extends Utils {
     /**
      *
      * @param content
-     * @param onheard
+     * @param onhearh
      * @param status  0:空；1：正在煮；2：熟了；3：糊了
      * @param type
      */
-    constructor({content = [], onheard, status}) {
+    constructor({
+        content=[],
+        onhearh=true,
+        status=0
+    }) {
         super();
         this.type = 3; //锅
-        this.content = content;
-        this.onhearh = onhearh;
-        this.timer1 = {id: 0, totalTime: 0, elapsedTime: 0};
-        this.timer2 = {id: 0, totalTime: 4000, elapsedTime: 0};
-        this.status = status;
+        this.content = content || [];
+        this.onhearh = onhearh || true;
+        this.timer1 = {
+            id: 0,
+            totalTime: 0,
+            elapsedTime: 0
+        };
+        this.timer2 = {
+            id: 0,
+            totalTime: 4000,
+            elapsedTime: 0
+        };
+        this.status = status || 0;
     }
 
     pushContent(food) {
@@ -356,8 +467,16 @@ class Pan extends Utils {
     }
 
     pickContent() {
-        this.timer1 = {id: 0, totalTime: 0, elapsedTime: 0};
-        this.timer2 = {id: 0, totalTime: 4000, elapsedTime: 0};
+        this.timer1 = {
+            id: 0,
+            totalTime: 0,
+            elapsedTime: 0
+        };
+        this.timer2 = {
+            id: 0,
+            totalTime: 4000,
+            elapsedTime: 0
+        };
         let result = this.content;
         this.content = null;
         this.status = 0;
@@ -374,8 +493,7 @@ class Pan extends Utils {
     canPick() {
         if (this.status === 2 || this.status === 3) {
             return true;
-        }
-        else return false;
+        } else return false;
     }
 
     startCooking() {
@@ -441,40 +559,395 @@ class Plate extends Utils {
      * @param content
      * @param status  0:空的 1：有东西的
      */
-    constructor({content = null}) {
+    constructor({
+        content=null
+    }) {
         super();
         this.type = 4;
-        this.content = content;
+        this.content = content || null;
 
     }
 
     canPut() {
         if (!this.content) {
             return true;
-        }
-        else {
+        } else {
             return false;
         }
     }
 
 }
 
+class Ground {
+    /**
+     *
+     * @param position
+     */
+    constructor(position) {
+        this.type = 7;
+        this.position = position;
+    }
+}
 
-class Utils {
-    constructor() {
+
+
+//菜单
+class Menu {
+    /**
+     *
+     * @param type
+     * @param number
+     * @param score
+     */
+    constructor({
+        type,
+        number,
+        score
+    }) {
+        this.type = type;
+        this.number = number;
+        this.score = score;
+        this.timer = {
+            id: 0,
+            totalTime: 60000,
+            elapsedTime: 0
+        };
+        this.timer.id = setInterval(() => {
+            if (this.timer.totalTime <= this.timer.elapsedTime) {
+                this.score.reduceGrade();
+                this.timer.elapsedTime = 0;
+            }
+            this.timer.elapsedTime += 16;
+        }, 16);
     }
 
-    pushContent(obj) {
-        this.content = obj;
+    stopTimer() {
+        clearInterval(this.timer.id);
     }
 
-    pickCotent() {
-        let result = this.content;
-        this.content = null;
-        return result;
+    isMatch(plate) {
+        if (plate.status === 0) {
+            return false;
+        }
+        if (plate.content.state === 1) {
+            return false;
+        }
+        if (plate.content.composition.length !== this.number) {
+            return false;
+        }
+        return plate.content.composition.every((veggie) => {
+            if (veggie === this.type)
+                return true;
+            else return false;
+        })
     }
+
 
 }
 
-const map = [];
+//评分系统
+class Score {
+    constructor(menu) {
+        this.score = 0;
+        this.menus = menu;
+    }
 
+    grade(content) {
+        for (let i = 0; i < this.menus.length; i++) {
+            if (this.menus[i].isMatch(content)) {
+                this.score += 10;
+                let menu = this.menus.splice(i, 1);
+                menu.stopTimer();
+                return;
+            }
+        }
+    }
+
+    reduceGrade() {
+        this.score -= 10;
+    }
+
+
+}
+
+
+class Game {
+    constructor(map) {
+        this.menus = [];
+        this.player1 = new Person({
+            id: 0
+        });
+        this.player2 = new Person({
+            id: 1
+        });
+        this.score = new Score(this.menus);
+        this.cupboard = new Cupboard({
+            x: 0,
+            y: 0
+        });
+        this.output = new Output({
+            cupboard: this.cupboard,
+            position: {
+                x: 0,
+                y: 1
+            },
+            score: this.score
+        });
+        this.map = this.initMap(map);
+        this.timer = {
+            id: 0,
+            totalTime: 120000,
+            elapsedTime: 0
+        };
+    }
+
+    initMap(map) {
+        //  map = [[1, 1, 2, 1], [1, 1, 2, 1], [1, 1, 2, 1], [1, 1, 2, 1]];
+        // 0:普通； 1：灶台 ； 2：取菜台（8：蘑菇 9：西红柿） ； 3：切菜台 ； 4：上菜口 ； 5 ：垃圾桶 ； 6：出盘口 7：地砖
+        //11 边界  12 player1  13 player2
+        let result = [];
+        for (let i = 0; i < map.length; i++) {
+            result.push([]);
+            for (let j = 0; j < map[0].length; j++) {
+                switch (map[i][j]) {
+                    case 0:
+                        result[i][j] = new Pane({
+                            type: 0,
+                            position: {
+                                x: i,
+                                y: j
+                            },
+                            enable_move: false,
+                            put_down: true,
+                            pick_up: true,
+                            content: null
+                        });
+                        break;
+                    case 1:
+                        result[i][j] = new Pane({
+                            type: 1,
+                            position: {
+                                x: i,
+                                y: j
+                            },
+                            enable_move: false,
+                            put_down: true,
+                            pick_up: true,
+                            content: new Pan({})
+                        });
+                        break;
+                        //取菜口2有两种菜，所以分成8和9( 8 蘑菇  9 西红柿)
+                    case 3:
+                        result[i][j] = new Chopping({
+                            position: {
+                                x: i,
+                                y: j
+                            }
+                        });
+                        break;
+                    case 4:
+                        result[i][j] = this.output;
+                        break;
+                    case 5:
+                        result[i][j] = new Pane({
+                            type: 5,
+                            position: {
+                                x: i,
+                                y: j
+                            },
+                            enable_move: false,
+                            put_down: true,
+                            pick_up: false,
+                            content: null
+                        });
+                        break;
+                    case 6:
+                        result[i][j] = this.cupboard;
+                        this.cupboard.setPosition({
+                            x: i,
+                            y: j
+                        });
+                        break;
+                    case 7:
+                        result[i][j] = new Pane({
+                            type: 7,
+                            position: {
+                                x: i,
+                                y: j
+                            },
+                            enable_move: true,
+                            put_down: false,
+                            pick_up: false,
+                            content: null
+                        });
+                        break;
+                    case 8:
+                        result[i][j] = new Warehouse({
+                            veggie: 0,
+                            position: {
+                                x: i,
+                                y: j
+                            }
+                        });
+                        break;
+                    case 9:
+                        result[i][j] = new Warehouse({
+                            veggie: 1,
+                            position: {
+                                x: i,
+                                y: j
+                            }
+                        });
+                        break;
+                    case 10:
+                        result[i][j] = new Pane({
+                            type: 0,
+                            position: {
+                                x: i,
+                                y: j
+                            },
+                            enable_move: false,
+                            put_down: true,
+                            pick_up: true,
+                            content: new Plate({})
+                        });
+                        break;
+                    case 11:
+                        result[i][j] = new Pane({
+                            type: 0,
+                            position: {
+                                x: i,
+                                y: j
+                            },
+                            enable_move: false,
+                            put_down: false,
+                            pick_up: false,
+                            content: null
+                        });
+                        break;
+                    case 12:
+                        result[i][j] = new Pane({
+                            type: 7,
+                            position: {
+                                x: i,
+                                y: j
+                            },
+                            enable_move: true,
+                            put_down: false,
+                            pick_up: false,
+                            content: this.player1
+                        });
+                        this.player1.position = {
+                            x: i,
+                            y: j
+                        };
+                        this.player1.forward_object = result[i + this.player1.forward.x][j + this.player1.forward.y];
+                        break;
+                    case 13:
+                        result[i][j] = new Pane({
+                            type: 7,
+                            position: {
+                                x: i,
+                                y: j
+                            },
+                            enable_move: true,
+                            put_down: false,
+                            pick_up: false,
+                            content: this.player2
+                        });
+                        this.player2.position = {
+                            x: i,
+                            y: j
+                        };
+                        this.player2.forward_object = result[i + this.player2.forward.x][j + this.player2.forward.y];
+                        break;
+
+                }
+            }
+        }
+        return result;
+    }
+
+    start() {
+
+        let id = setInterval(() => {
+            if (this.timer.totalTime <= this.timer.elapsedTime) {
+                this.end();
+            }
+            if (this.timer.elapsedTime % 10000 === 0) {
+                if (this.menus.length <= 3) {
+                    let type = Math.floor(Math.random());
+                    let number = Math.floor(Math.random() * 2) + 1;
+                    this.menus.push(new Menu({
+                        type,
+                        number,
+                        score: this.score
+                    }));
+                }
+            }
+            this.timer.elapsedTime += 16;
+        }, 16);
+        this.timer.id = id;
+    }
+
+    end() {
+        clearInterval(this.timer.id);
+        this.timer = {
+            id: 0,
+            totalTime: 120000,
+            elapsedTime: 0
+        };
+    }
+
+    player1Moving(forward) {
+        this.moving(this.player1, this.player2, forward);
+    }
+    player2Moving(forward) {
+        this.moving(this.player2, this.player1, forward);
+    }
+    moving(obj1, obj2, forward) {
+        //1》判断按键方向与人物2的 "forward" 是否一致    如果不一致，需要先转动（改变人物2的 "forward" 属性和 "img" 属性）
+        //var urlStr=obj1.forward.+obj1.img.+".png";
+        //obj1.img=urlStr;
+        if (obj1.forward.x != forward.x || obj1.forward.y != forward.y) {
+            obj1.forward.x = forward.x;
+            obj1.forward.y = forward.y;
+            //obj1.img=url();
+            obj1.forward_object = this.findForwardObj(obj1.position, forward);
+        }
+        //2》判断人物面前是否可以移动    1、根据地图矩阵判断 2、判断另一个人物的位置
+        if (obj1.forward_object.enable_move === true ) {
+            if (obj1.forward_object.content === null) {
+                this.map[obj1.forward_object.position.x][obj1.forward_object.position.y].content = null;
+                obj1.move();
+                this.map[obj1.forward_object.position.x][obj1.forward_object.position.y].content = obj1;
+                obj1.forward_object = this.findForwardObj(obj1.position, forward);
+            } else {
+                //两人物之间发生碰撞，会将对方推走
+                if(this.findForwardObj(obj2.position,obj2.forward).enable_move===true){
+                    this.map[obj2.forward_object.position.x][obj2.forward_object.position.y].content = null;
+                obj2.move(obj1.forward);
+                this.map[obj2.forward_object.position.x][obj2.forward_object.position.y].content = obj2;
+                obj2.forward_object = this.findForwardObj(obj2.position, obj2.forward);
+                this.map[obj1.forward_object.position.x][obj1.forward_object.position.y].content = null;
+                obj1.move();
+                this.map[obj1.forward_object.position.x][obj1.forward_object.position.y].content = obj1;
+                obj1.forward_object = this.findForwardObj(obj1.position, forward);
+                }
+                
+            }
+        }
+    }
+    findForwardObj(obj, forward) {
+        var newObj = { ...obj
+        };
+        newObj.x += forward.x;
+        newObj.y += forward.y;
+        return this.map[newObj.x][newObj.y]
+
+    }
+
+    showEnding() {
+        alert("最终分数：" + this.score);
+    }
+}
