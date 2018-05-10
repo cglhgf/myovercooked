@@ -1,4 +1,4 @@
-//付禹陶 2018.05.08
+//付禹陶 2018.05.10
 /*
 	实现功能:
 		按 WSAD 时，Player1 移动
@@ -12,156 +12,102 @@
 
 */
 
-//”AAA“表示边界，”BBB“表示地板
-MapArray=[
-	"AAA","AAA","AAA","AAA","AAA","AAA","AAA","AAA","AAA","AAA","AAA","AAA",
-	"AAA","BBB","BBB","BBB","BBB","AAA","BBB","BBB","AAA","AAA","BBB","AAA",
-	"AAA","BBB","BBB","BBB","BBB","BBB","BBB","BBB","BBB","BBB","BBB","AAA",
-	"AAA","BBB","BBB","AAA","AAA","BBB","BBB","BBB","AAA","BBB","BBB","AAA",
-	"AAA","BBB","BBB","BBB","BBB","BBB","BBB","BBB","BBB","BBB","BBB","AAA",
-	"AAA","BBB","BBB","BBB","BBB","AAA","BBB","BBB","BBB","BBB","BBB","AAA",
-	"AAA","BBB","BBB","BBB","BBB","AAA","BBB","BBB","BBB","BBB","BBB","AAA",
-	"AAA","AAA","BBB","BBB","BBB","BBB","BBB","BBB","BBB","BBB","BBB","AAA",
-	"AAA","AAA","AAA","AAA","AAA","AAA","AAA","AAA","AAA","AAA","AAA","AAA"
-];
-//需要提前给出地图的宽度
-len=12;  //宽度为12个格子
+//	"img":"url(images/left-1.png)"
+/*
+constructor({id, content, forward, position, forward_object}) {
+        super();
+        this.id = id;
+        this.content = content;
+        this.foward = forward;
+        this.position = position;
+        this.forward_object = forward_object;
+    }
+*/
 
-//初始化两个人物对象的信息
-Player1={
-	"id": "Player1",
-	"content": {},
-	"forward": "Down",
-	"position": [1,3],
-	"forwardObject": "BBB",
-	"img":"url(images/left-1.png)"
-};
-Player2={
-	"id": "Player2",
-	"content": {},
-	"forward": "Down",
-	"position": [3,2],
-	"forwardObject": "BBB",
-	"img":"url(images/left-1.png)"
-};
-var box=document.getElementById("box");
-box.style.width=len*50+"px";
 
-//初始化游戏，创建两个人物的实体节点
-function initGame(){
-	for(var index=0;index<MapArray.length;index++){
-		var node=document.createElement("div");
-		node.className=MapArray[index];
-		box.appendChild(node);
-	}
-//创建Player1
-	var node1=document.createElement("div");
-	node1.id="P1";
-	node1.style.left=Player1.position[1]*50+"px";
-	node1.style.top=Player1.position[0]*50+"px";
-	box.appendChild(node1);
-//创建Player2
-	var node2=document.createElement("div");
-	node2.id="P2";
-	node2.style.left=Player2.position[1]*50+"px";
-	node2.style.top=Player2.position[0]*50+"px";
-	box.appendChild(node2);
-}
-initGame();
-
-var Ply1=document.getElementById("P1");
-var Ply2=document.getElementById("P2");
+MapArray=new Map();
+len=MapArray[0].length;  //宽度为19个格子
+Player1=new Person("id","content","forward","position","forward_object");
+Player2=new Person();
 
 document.onkeyup=function(e){
 	var e=window.event||e;
 	switch(e.keyCode){
 	//Player2按键
 		case 37:
-			moving(Player2,Player1,"Left",Ply2,Ply1);
+			throttle(moving(Player2,Player1,"Left"),200);
 			break;
 		case 38:
-			moving(Player2,Player1,"Up",Ply2,Ply1);
+			throttle(moving(Player2,Player1,"Up"),200);
 			break;
 		case 39:
-			moving(Player2,Player1,"Right",Ply2,Ply1);
+			throttle(moving(Player2,Player1,"Right"),200);
 			break;
 		case 40:
-			moving(Player2,Player1,"Down",Ply2,Ply1);
+			throttle(moving(Player2,Player1,"Down"),200);
 			break;
+		/*
+		case :
+			break;
+		case :
+			break;
+		*/
 	//Player1按键
 		case 65:
-			moving(Player1,Player2,"Left",Ply1,Ply2);
+			throttle(moving(Player1,Player2,"Left"),200);
 			break;
 		case 87:
-			moving(Player1,Player2,"Up",Ply1,Ply2);
+			throttle(moving(Player1,Player2,"Up"),200);
 			break;
 		case 68:
-			moving(Player1,Player2,"Right",Ply1,Ply2);
+			throttle(moving(Player1,Player2,"Right"),200);
 			break;
 		case 83:
-			moving(Player1,Player2,"Down",Ply1,Ply2);
+			throttle(moving(Player1,Player2,"Down"),200);
 			break;
+		/*
+		case 70:
+			//F
+			switch(judgeForward()){
+				case:
+				case:
+			}
+			break;
+		case 71:
+			//G
+			break;
+		*/
 	}
 }
 
-function moving(obj1,obj2,direction,item1,item2){
+function moving(obj1,obj2,direction){
 //1》判断按键方向与人物2的 "forward" 是否一致    如果不一致，需要先转动（改变人物2的 "forward" 属性和 "img" 属性）
+	var urlStr=obj1.forward.+obj1.img.+".png";
+	obj1.img=urlStr;
 	if(obj1.forward!=direction){
 		obj1.forward=direction;
 		//obj1.img=url();
-		obj1.forwardObject=findForwardObj(obj1.position,direction)[1];
+		obj1.forward_object=findForwardObj(obj1.position,direction)[1];
 	}
 //2》判断人物面前是否可以移动    1、根据地图矩阵判断 2、判断另一个人物的位置
-	if(obj1.forwardObject==="BBB"){
+	if(obj1.forward_object===0){
 		if(findForwardObj(obj1.position,direction)[0][0]!==obj2.position[0]||findForwardObj(obj1.position,direction)[0][1]!==obj2.position[1]){
 			obj1.position=findForwardObj(obj1.position,direction)[0];
-			switch(direction){
-				case "Left":
-					item1.style.left=obj1.position[1]*50+"px";
-					//item1.style.background=obj1.img;
-					break;
-				case "Up":
-					item1.style.top=obj1.position[0]*50+"px";
-					break;
-				case "Right":
-					item1.style.left=obj1.position[1]*50+"px";
-					break;
-				case "Down":
-					item1.style.top=obj1.position[0]*50+"px";
-					break;
-			}
 			var indexposition=findForwardObj(obj1.position,direction)[0];
-			obj1.forwardObject=MapArray[indexposition[0]*len+indexposition[1]];
+			obj1.forward_object=MapArray[indexposition[0]][indexposition[1]];
 		}else{
-			//两人物之间发生碰撞
+		//两人物之间发生碰撞，会将对方推走
 			var judgeArr=findForwardObj(obj2.position,direction);
-			if( judgeArr[1]==="BBB" ){
+			if( judgeArr[1]===0 ){
 				obj2.position=judgeArr[0];
 				obj1.position=findForwardObj(obj1.position,direction)[0];
-				switch(direction){
-					case "Left":
-						item1.style.left=obj1.position[1]*50+"px";
-						item2.style.left=obj2.position[1]*50+"px";
-						break;
-					case "Up":
-						item1.style.top=obj1.position[0]*50+"px";
-						item2.style.top=obj2.position[0]*50+"px";
-						break;
-					case "Right":
-						item1.style.left=obj1.position[1]*50+"px";
-						item2.style.left=obj2.position[1]*50+"px";
-						break;
-					case "Down":
-						item1.style.top=obj1.position[0]*50+"px";
-						item2.style.top=obj2.position[0]*50+"px";
-						break;
-				}
 			}
 		}
 	}
 }
 
 function findForwardObj(arr,forward){
+	// arr==>坐标[x,y]  forward==>按键方向
 	var i=arr[0],j=arr[1];
 	switch(forward){
 		case "Left":
@@ -173,5 +119,20 @@ function findForwardObj(arr,forward){
 		case "Down":
 			i++; break;
 	}
-	return [[i,j],MapArray[i*len+j]];
+	return [[i,j],MapArray[i][j]];
 }
+
+function throttle(fn,time=200){
+  let timer;
+  return function(...args){
+    if(timer == null){
+      fn.apply(this,args);
+      timer = setTimeout(() => {
+        timer = null;
+      }, time)
+    }
+  }
+}
+
+
+
